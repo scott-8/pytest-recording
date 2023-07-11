@@ -1,6 +1,6 @@
 import os
 from copy import deepcopy
-from itertools import chain, starmap
+from itertools import starmap
 from types import ModuleType
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -10,20 +10,11 @@ from _pytest.mark.structures import Mark
 from vcr import VCR
 from vcr.cassette import CassetteContextDecorator
 from vcr.persisters.filesystem import FilesystemPersister
-from vcr.serialize import deserialize
 
+from .exceptions import CassetteDecodeError, CassetteNotFoundError
 from .utils import unique, unpack
 
 ConfigType = Dict[str, Any]
-
-
-def load_cassette(cassette_path: str, serializer: ModuleType) -> Tuple[List, List]:
-    try:
-        with open(cassette_path, encoding="utf8") as f:
-            cassette_content = f.read()
-    except OSError:
-        return [], []
-    return deserialize(cassette_content, serializer)
 
 
 @attr.s(slots=True)
@@ -32,14 +23,23 @@ class CombinedPersister(FilesystemPersister):
 
     extra_paths = attr.ib(type=List[str])
 
+    def _load_cassette(self, path, serializer):
+        """Suppress loading errors."""
+        try:
+            return super().load_cassette(path, serializer)
+        except (CassetteDecodeError, CassetteNotFoundError):
+            return [], []
+
     # FilesystemPersister.load_casette is a classmethod, which
     # is likely why pylint gives an error.
     def load_cassette(  # pylint: disable=arguments-differ
         self, cassette_path: str, serializer: ModuleType
     ) -> Tuple[List, List]:
-        all_paths = chain.from_iterable(((cassette_path,), self.extra_paths))
+        all_paths = unpack(((cassette_path,), self.extra_paths))
         # Pairs of 2 lists per cassettes:
-        all_content = (load_cassette(path, serializer) for path in unique(all_paths))
+        all_content = (
+            self._load_cassette(path, serializer) for path in unique(all_paths)
+        )
         # Two iterators from all pairs from above: all requests, all responses
         # Notes.
         # 1. It is possible to do it with accumulators, for loops and `extend` calls,
@@ -49,7 +49,7 @@ class CombinedPersister(FilesystemPersister):
         requests, responses = starmap(unpack, zip(*all_content))
         requests, responses = list(requests), list(responses)
         if not requests or not responses:
-            raise ValueError("No cassettes found.")
+            raise CassetteNotFoundError("No cassettes found.")
         return requests, responses
 
 
