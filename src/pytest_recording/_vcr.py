@@ -1,6 +1,6 @@
 import os
 from copy import deepcopy
-from itertools import starmap
+from itertools import chain, starmap
 from types import ModuleType
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -17,7 +17,7 @@ from .utils import unique, unpack
 ConfigType = Dict[str, Any]
 
 
-def load_cassette(path, serializer):
+def load_cassette(path: str, serializer: ModuleType) -> Tuple[List, List]:
     """Suppress loading errors."""
     try:
         return FilesystemPersister.load_cassette(path, serializer)
@@ -36,9 +36,9 @@ class CombinedPersister(FilesystemPersister):
     def load_cassette(  # pylint: disable=arguments-differ
         self, cassette_path: str, serializer: ModuleType
     ) -> Tuple[List, List]:
-        all_paths = unpack(((cassette_path,), self.extra_paths))
+        all_paths = chain((cassette_path,), self.extra_paths)
         # Pairs of 2 lists per cassettes:
-        all_content = (load_cassette(path, serializer) for path in unique(all_paths))
+        all_content = list(load_cassette(path, serializer) for path in unique(all_paths))
         # Two iterators from all pairs from above: all requests, all responses
         # Notes.
         # 1. It is possible to do it with accumulators, for loops and `extend` calls,

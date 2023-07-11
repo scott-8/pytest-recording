@@ -7,17 +7,17 @@ class UsageError(Exception):
 try:
     from vcr.persisters.filesystem import CassetteNotFoundError
 except ImportError:
-
+    # skip no-redef
     class CassetteNotFoundError(ValueError):
-        """Retain compatibility with vcr.py<5"""
+        """Retain compatibility with vcr.py<5."""
 
 
 try:
     from vcr.persisters.filesystem import CassetteDecodeError
 except ImportError:
-
+    # skip no-redef
     class CassetteDecodeError(ValueError):
-        """Retain compatibility with vcr.py<5"""
+        """Retain compatibility with vcr.py<5."""
 
 
 __all__ = ["UsageError", "CassetteNotFoundError", "CassetteDecodeError"]

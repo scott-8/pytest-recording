@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 pytest_plugins = "pytester"
@@ -8,7 +10,7 @@ def create_file(testdir):
     def inner(path, content):
         path = testdir.tmpdir.join(path)
         path.ensure().write(content)
-        return path
+        return Path(path).as_posix()
 
     return inner
 

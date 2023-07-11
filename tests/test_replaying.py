@@ -102,12 +102,13 @@ def test_merged_kwargs(testdir, get_response_cassette):
         """
 import pytest
 import requests
+from pytest_recording.exceptions import CassetteNotFoundError
 
 def before_request(request):
-    raise ValueError("Before")
+    raise CassetteNotFoundError("Before")
 
 def override_before_request(request):
-    raise ValueError("Overridden")
+    raise CassetteNotFoundError("Overridden")
 
 
 pytestmark = pytest.mark.vcr(before_record_request=before_request)
@@ -116,12 +117,12 @@ GET_CASSETTE = "{}"
 
 @pytest.mark.vcr(GET_CASSETTE)
 def test_custom_path():
-    with pytest.raises(ValueError, match="Before"):
+    with pytest.raises(CassetteNotFoundError, match="Before"):
         requests.get("http://httpbin.org/get")
 
 @pytest.mark.vcr(GET_CASSETTE, before_record_request=override_before_request)
 def test_custom_path_with_kwargs():
-    with pytest.raises(ValueError, match="Overridden"):
+    with pytest.raises(CassetteNotFoundError, match="Overridden"):
         requests.get("http://httpbin.org/get")
     """.format(
             get_response_cassette
@@ -138,13 +139,14 @@ def test_single_kwargs(testdir):
         """
 import pytest
 import requests
+from pytest_recording.exceptions import CassetteNotFoundError
 
 def before_request(request):
-    raise ValueError("Before")
+    raise CassetteNotFoundError("Before")
 
 @pytest.mark.vcr(before_record_request=before_request)
 def test_single_kwargs():
-    with pytest.raises(ValueError, match="Before"):
+    with pytest.raises(CassetteNotFoundError, match="Before"):
         requests.get("http://httpbin.org/get")
 
     """
@@ -256,6 +258,7 @@ def test_global_config(testdir, get_response_cassette, scope):
         """
 import pytest
 import requests
+from pytest_recording.exceptions import CassetteNotFoundError
 
 
 @pytest.fixture(scope="{}")
@@ -263,11 +266,11 @@ def vcr_config():
     return {{"before_record_request": before_request}}
 
 def before_request(request):
-    raise ValueError("Before")
+    raise CassetteNotFoundError("Before")
 
 @pytest.mark.vcr("{}")
 def test_own():
-    with pytest.raises(ValueError):
+    with pytest.raises(CassetteNotFoundError):
         requests.get("http://httpbin.org/get")
     """.format(
             scope, get_response_cassette
