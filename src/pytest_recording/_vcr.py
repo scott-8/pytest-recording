@@ -17,18 +17,19 @@ from .utils import unique, unpack
 ConfigType = Dict[str, Any]
 
 
+def load_cassette(path, serializer):
+    """Suppress loading errors."""
+    try:
+        return FilesystemPersister.load_cassette(path, serializer)
+    except (CassetteDecodeError, CassetteNotFoundError):
+        return [], []
+
+
 @attr.s(slots=True)
 class CombinedPersister(FilesystemPersister):
     """Load extra cassettes, but saves only the first one."""
 
     extra_paths = attr.ib(type=List[str])
-
-    def _load_cassette(self, path, serializer):
-        """Suppress loading errors."""
-        try:
-            return super().load_cassette(path, serializer)
-        except (CassetteDecodeError, CassetteNotFoundError):
-            return [], []
 
     # FilesystemPersister.load_casette is a classmethod, which
     # is likely why pylint gives an error.
@@ -37,9 +38,7 @@ class CombinedPersister(FilesystemPersister):
     ) -> Tuple[List, List]:
         all_paths = unpack(((cassette_path,), self.extra_paths))
         # Pairs of 2 lists per cassettes:
-        all_content = (
-            self._load_cassette(path, serializer) for path in unique(all_paths)
-        )
+        all_content = (load_cassette(path, serializer) for path in unique(all_paths))
         # Two iterators from all pairs from above: all requests, all responses
         # Notes.
         # 1. It is possible to do it with accumulators, for loops and `extend` calls,
